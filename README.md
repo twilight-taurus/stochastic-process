@@ -1,5 +1,8 @@
-Implementation of various stochastic processes from financial mathematics.
+Implementations of various stochastic processes from financial mathematics in the Rust Programming Language.
 
-- Specifically built for randomized, continuous generation of objects in 2d simulations, 2d games, etc.
+- Useful for: 
+
+- People seeking randomized, continuous generation of plotted objects/lines/dots/etc. in 2d simulations, 2d games, graphics etc.
+
 
 - Work in progress.
