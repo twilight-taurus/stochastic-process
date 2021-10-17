@@ -1,70 +1,9 @@
-//#![feature(box_into_inner)]
-
-use std::{marker::PhantomData, ops::Mul};
-
-use num_integer::Roots;
+//use num_integer::Roots;
 use rand::Rng;
 use num_traits::{PrimInt, Float, NumOps, FromPrimitive, ToPrimitive, NumAssign};
 use num_traits::cast::NumCast;
-use num_traits::bounds::Bounded;
 
-extern crate num_integer;
-extern crate num_traits;
-
-#[derive(Debug, Clone, Copy)]
-pub struct Point {
-    pub x: f32,
-    pub y: f32,
-}
-
-#[derive(Debug, Clone)]
-pub struct Node
-{
-    current: Point,
-    next: Option<*mut Node>,
-    prev: Option<*mut Node>
-}
-
-impl Node {
-    pub fn new(current: Point) -> Self {
-        Self {
-            current: current,
-            next: None,
-            prev: None,
-        }
-    }
-}
-
-// struct created by calling iter() method on the model struct.
-// -> move to base.rs as a base for all model types.
-pub struct Iter<Node> {
-    head: Option<*mut Node>,
-    tail: Option<*mut Node>,
-    // marker to prevent compiler form complaining about lifetime specifier 'a
-    marker: PhantomData<*mut Node>
-}
-
-// iterator one-ended
-impl Iterator for Iter<Node> {
-    type Item = Point;
-
-    #[inline]
-    fn next(&mut self) -> Option<Self::Item> {
-        match self.head {
-            None => {
-                None
-            },
-            Some(head) => {
-                unsafe {
-                    let node = &*head;
-                    self.head = node.next;
-                    // return copy of current element, not next element.
-                    Some(node.current)
-                }
-            }
-        }
-    }
-}
+use crate::base::*;
 
 #[derive(Debug)]
 pub struct GeometricBrownianMotion
@@ -125,15 +64,14 @@ impl GeometricBrownianMotion {
     }
     #[inline]
     fn pop_back(&mut self) -> Option<Box<Node>> {
-        self.tail.map(|node| unsafe {
-            let node = Box::from_raw(node);
-            self.tail = node.prev;
-        });
-
-        let result: Option<Box<Node>> = match self.tail {
+        let result = match self.tail {
             None => {
-                // no nodes available.
-                self.head = None;
+                if let Some(head) = self.head {
+                    unsafe {
+                        let boxed = Box::from_raw(head);
+                    }
+                    self.head = None;
+                }
                 None
             }
             Some(tail) => {

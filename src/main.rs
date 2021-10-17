@@ -1,4 +1,5 @@
 use Foo::brownian::*;
+use Foo::base::*;
 
 fn main() {
     let mut gbm = 
