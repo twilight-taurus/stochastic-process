@@ -1,85 +1,193 @@
+//#![feature(box_into_inner)]
+
+use std::{marker::PhantomData, ops::Mul};
+
 use num_integer::Roots;
 use rand::Rng;
+use num_traits::{PrimInt, Float, NumOps, FromPrimitive, ToPrimitive, NumAssign};
+use num_traits::cast::NumCast;
+use num_traits::bounds::Bounded;
 
+extern crate num_integer;
+extern crate num_traits;
 
-#[derive(Debug)]
-struct GBMNode<T> {
-    current: T,
-    next: Option<GBMNode<T>,
+#[derive(Debug, Clone, Copy)]
+pub struct Point {
+    pub x: f32,
+    pub y: f32,
 }
 
-impl Iterator for GBMNode<T> {
-    // refer to this type using Self::Item
-    type Item = T;
+#[derive(Debug, Clone)]
+pub struct Node
+{
+    current: Point,
+    next: Option<*mut Node>,
+    prev: Option<*mut Node>
+}
 
-    // next is only required method for iterator.
+impl Node {
+    pub fn new(current: Point) -> Self {
+        Self {
+            current: current,
+            next: None,
+            prev: None,
+        }
+    }
+}
+
+// struct created by calling iter() method on the model struct.
+// -> move to base.rs as a base for all model types.
+pub struct Iter<Node> {
+    head: Option<*mut Node>,
+    tail: Option<*mut Node>,
+    // marker to prevent compiler form complaining about lifetime specifier 'a
+    marker: PhantomData<*mut Node>
+}
+
+// iterator one-ended
+impl Iterator for Iter<Node> {
+    type Item = Point;
+
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(node) = next {
-            self.current = self.next.current;
-        } else  {
-            Some(current)
+        match self.head {
+            None => {
+                None
+            },
+            Some(head) => {
+                unsafe {
+                    let node = &*head;
+                    self.head = node.next;
+                    // return copy of current element, not next element.
+                    Some(node.current)
+                }
+            }
         }
     }
 }
 
 #[derive(Debug)]
-struct GeometricBrownianMotion<T> {
-    n: u32; // max values limit
+pub struct GeometricBrownianMotion
+{
+    pub head: Option<*mut Node>,
+    pub tail: Option<*mut Node>,
 
-    initial: T; // starting value
+    len: usize,
 
-    calculated_values: std::vec::Vec<GBMNode<T>>;
-    drift: u32; // stochastic drift: max. change from the average value in the stochastic process.
-    volatility: u32; // stochastic volatility
+    initial: Point, // starting point
+
+    drift: f32, // stochastic drift: max. change from the average value in the stochastic process.
+    volatility: f32, // stochastic volatility
                     // assumption: volatility in prices/etc is not constant over time.
                     // purpose: value allows volatility in the underlying object to fluctuate over time.
 
-    delta: f32; // time step. [0, 1] (ideally)
-    total_time: f32; // total time: multiple of delta (ideally)
+    step: f32, // distance per loop/step.
+    distance: f32, // total distance: multiple of step
 }
 
-impl Default for GeometricBrownianMotion {
-    fn default() -> Self {
-        GeometricBrownianMotion {
-            simulations: std::vec::Vec::new(),
-            n: 1000,
-            initial: 0,
-            current: 0,
-            drift: 70,
-            volatility: 50,
-            delta: 0.3,
-            timer: delta * 50.0,
-        }
-    }
-}
 
 impl GeometricBrownianMotion {
-    pub fn new(n: u32, initial: u32, drift: u32, volatility: u32, delta: f32, total_time: f32) -> Self {
+    pub fn new(initial: Point, drift: f32, volatility: f32, step: f32, loops: u32) -> Self {
         Self {
-            simulations: std::vec::Vec::new(),
-            n: n,
+            head: None,
+            tail: None,
+
+            len: 0,
+
+            // model parameters
             initial: initial,
             drift: drift,
             volatility: volatility,
-            delta: delta,
-            timer: total_time,
+            step: step,
+            distance: loops as f32 * step,
         }
+    }
+
+    #[inline]
+    fn push_back(&mut self, mut boxed: Box<Node>) {
+    
+        boxed.next = None;
+        boxed.prev = self.tail; // assign current tail node of container to prev pointer of new node. 
+                                // -> (the container's last element)
+        unsafe {
+            let node = Box::leak(boxed); // leak the box.
+
+            match self.tail {
+                // no elements in container. create head node.
+                None => self.head = Some(node),
+                // elements exist. assign next pointer of tail to new node.
+                Some(tail) => (*tail).next = Some(node),
+            }
+
+            // independently of whether tail exists, assign current node to tail.
+            self.tail = Some(node);
+        }
+    }
+    #[inline]
+    fn pop_back(&mut self) -> Option<Box<Node>> {
+        self.tail.map(|node| unsafe {
+            let node = Box::from_raw(node);
+            self.tail = node.prev;
+        });
+
+        let result: Option<Box<Node>> = match self.tail {
+            None => {
+                // no nodes available.
+                self.head = None;
+                None
+            }
+            Some(tail) => {
+                unsafe {
+                    let mut boxed = Box::from_raw(tail);
+                    boxed.next = None;
+                    if let Some(prev) = boxed.prev {
+                        self.tail = Some(prev);
+                    }
+                    Some(boxed)
+                }
+            }
+        };
+
+        result
     }
 
     // generate motion from given attributes
     pub fn generate(&mut self) {
-        while (timer > 0.0) {
-            let dS = self.current*self.drift*self.delta +
-                self.current*self.volatility*rand::thread_rng().gen_range( 0..self.delta.sqrt() );
-
-            self.calculated_values.push(self.current + dS as u32);
-            self.current = dS as u32;
-            self.timer -= self.delta;
+        while self.distance > 0.0 {
+            self.generate_single();
+            self.distance -= self.step;
+            
         }
     }
     // generate single value
     pub fn generate_single(&mut self) {
+        if let Some(tail) = self.tail {
+            unsafe {
+                let cur = &(*tail).current;
 
+                let res= cur.y * self.step * (self.drift as f32) +
+                    self.volatility * ( rand::thread_rng().gen_range(0..(self.step.sqrt() as u32)) as f32 );
+                
+                let boxed = Box::new( Node::new(
+                    Point {
+                                x: cur.x + self.step, y: res
+                            })
+                );        
+                self.push_back(boxed);
+                self.len += 1;
+            }
+        } else {
+            let res = self.initial.y * self.step * self.drift +
+                self.volatility * ( rand::thread_rng().gen_range(0..(self.step.sqrt() as u32)) as f32 );
+
+            let boxed = Box::new( Node::new(
+                Point {
+                            x: self.initial.x + self.step, y: res
+                        })
+            );
+            self.push_back(boxed);
+            self.len += 1;
+        }
     }
     // generate with different params
     pub fn generate_more(&mut self, n: u32, initial: u32, drift: u32, volatility: u32, delta: f32, total_time: f32) {
@@ -88,23 +196,13 @@ impl GeometricBrownianMotion {
     pub fn reset(&mut self) {
 
     }
-    pub fn set_drift(&mut self) {
-
+    pub fn set_drift(&mut self, drift: f32) {
+        self.drift = drift;
     }
-    pub fn set_volatility(&mut self) {
-
+    pub fn set_volatility(&mut self, volatility: f32) {
+        self.volatility = volatility
     }
-    pub fn set_delta(&mut self) {
-
-    }
-    pub fn set_limit(&mut self, limit: u32) {
-        if limit > n {
-            self.n = limit;
-        } else {
-            self.reset();
-        }
-    }
-    pub fn set_timer(&mut self, timer: f32) {
-        self.timer = timer;
+    pub fn set_step(&mut self, step: f32) {
+        self.step = step;
     }
 }
