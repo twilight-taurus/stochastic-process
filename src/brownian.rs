@@ -61,17 +61,15 @@ impl GeometricBrownianMotion {
             // independently of whether tail exists, assign current node to tail.
             self.tail = Some(node);
         }
+        self.len += 1;
     }
     #[inline]
     fn pop_back(&mut self) -> Option<Box<Node>> {
         let result = match self.tail {
             None => {
-                if let Some(head) = self.head {
-                    unsafe {
-                        let boxed = Box::from_raw(head);
-                    }
-                    self.head = None;
-                }
+                // hint: not necessary to Box::from_raw(self.head), since the memory is automatically boxed when
+                // the first self.tail is popped (below)
+                self.head = None;
                 None
             }
             Some(tail) => {
@@ -93,8 +91,6 @@ impl GeometricBrownianMotion {
     pub fn generate(&mut self) {
         while self.distance > 0.0 {
             self.generate_single();
-            self.distance -= self.step;
-            
         }
     }
     // generate single value
@@ -110,9 +106,9 @@ impl GeometricBrownianMotion {
                     Point {
                                 x: cur.x + self.step, y: res
                             })
-                );        
+                );
+
                 self.push_back(boxed);
-                self.len += 1;
             }
         } else {
             let res = self.initial.y * self.step * self.drift +
@@ -124,8 +120,9 @@ impl GeometricBrownianMotion {
                         })
             );
             self.push_back(boxed);
-            self.len += 1;
         }
+
+        self.distance -= self.step;
     }
     // generate with different params
     pub fn generate_more(&mut self, n: u32, initial: u32, drift: u32, volatility: u32, delta: f32, total_time: f32) {
@@ -143,4 +140,8 @@ impl GeometricBrownianMotion {
     pub fn set_step(&mut self, step: f32) {
         self.step = step;
     }
+}
+
+struct StandardBrownianMotion {
+    drift: Option<f32>, // with or without drift parameter determined at initialization.
 }

@@ -1,5 +1,5 @@
-use Foo::brownian::*;
-use Foo::base::*;
+use process_lib::brownian::*;
+use process_lib::base::*;
 
 fn main() {
     let mut gbm = 

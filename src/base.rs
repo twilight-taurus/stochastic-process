@@ -1,21 +1,19 @@
 // basic traits and types implemented by the structs.
-use std::{marker::PhantomData, ops::Mul};
+use std::marker::PhantomData;
 
 
-trait Process {
-    fn new() -> Self;
+pub trait Process {
+    fn generate(&mut self); // calculate multiple steps
 
-    fn generate(self);
+    fn generate_single(&mut self); // calculate a single step.
 
-    fn generate_single(self);
+//    fn generate_more(self);
 
-    fn generate_more(self);
+//    fn reset(self); // remove all elements
 
-    fn reset(self);
+    fn push_back(&mut self, boxed: Box<Node>); // add an element to back
 
-    fn push_back(self);
-
-    fn pop_back(self);
+    fn pop_back(&mut self) -> Option<Box<Node>>; // remove an element from back
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -44,7 +42,7 @@ impl Node {
 
 // struct created by calling iter() method on the model struct.
 // -> move to base.rs as a base for all model types.
-pub struct Iter<Node> {
+pub struct ProcessIter<Node> {
     head: Option<*mut Node>,
     tail: Option<*mut Node>,
     // marker to prevent compiler form complaining about lifetime specifier 'a
@@ -52,7 +50,7 @@ pub struct Iter<Node> {
 }
 
 // iterator one-ended
-impl Iterator for Iter<Node> {
+impl Iterator for ProcessIter<Node> {
     type Item = Point;
 
     #[inline]
