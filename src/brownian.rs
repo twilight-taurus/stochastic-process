@@ -1,15 +1,22 @@
+use futures::future;
+use futures::sink::Send;
 //use num_integer::Roots;
 use rand::Rng;
 use num_traits::{PrimInt, Float, NumOps, FromPrimitive, ToPrimitive, NumAssign};
 use num_traits::cast::NumCast;
 
+use tokio::{task, time, join}; // 1.3.0
+use tokio::stream::{Stream, StreamExt};
+
 use crate::base::*;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GeometricBrownianMotion
 {
-    pub head: Option<*mut Node>,
-    pub tail: Option<*mut Node>,
+    head: Option<*mut Node>,
+    tail: Option<*mut Node>,
+
+    calculated_values: std::vec::Vec<Point>,
 
     len: usize,
 
@@ -24,6 +31,20 @@ pub struct GeometricBrownianMotion
     distance: f32, // total distance: multiple of step
 }
 
+impl ProcessIntoIterator for GeometricBrownianMotion {
+    type Item = *mut Node;
+    type ProcessIntoIter = ProcessIterMut;
+
+    fn into_iter(&mut self) -> Self::ProcessIntoIter {
+        ProcessIterMut {
+            head: self.head.clone(), //
+            tail: self.tail.clone(),
+            len: (self.distance / self.step) as usize,
+        }
+    }
+}
+
+
 
 impl GeometricBrownianMotion {
     pub fn new(initial: Point, drift: f32, volatility: f32, step: f32, loops: u32) -> Self {
@@ -31,6 +52,7 @@ impl GeometricBrownianMotion {
             head: None,
             tail: None,
 
+            calculated_values: std::vec::Vec::<Point>::new(),
             len: 0,
 
             // model parameters
@@ -42,6 +64,10 @@ impl GeometricBrownianMotion {
         }
     }
 
+    fn retrieve(&mut self) {
+
+    }
+
     #[inline]
     fn push_back(&mut self, mut boxed: Box<Node>) {
     
@@ -49,7 +75,7 @@ impl GeometricBrownianMotion {
         boxed.prev = self.tail; // assign current tail node of container to prev pointer of new node. 
                                 // -> (the container's last element)
         unsafe {
-            let node = Box::leak(boxed); // leak the box.
+            let node = Box::leak(boxed);
 
             match self.tail {
                 // no elements in container. create head node.
@@ -128,8 +154,31 @@ impl GeometricBrownianMotion {
     pub fn generate_more(&mut self, n: u32, initial: u32, drift: u32, volatility: u32, delta: f32, total_time: f32) {
 
     }
-    pub fn reset(&mut self) {
+    // single element moved from linked list to vec.
+    async fn reorganize_single(&mut self) /*-> Option<*mut Node> */{
+        
+    }
+    // reorganize the linked-list into a Rust Vec type. (blocks r/w access to the linked-list.)
+    // it is done after generate() has completed.
 
+    // with a linked list initialization is slightly faster, with the added benefit of fast
+    // deallocation of a Vec type.
+    pub fn reset(&mut self) {
+        // if stopped, either end reached (reset complete), or linked list is broken.
+        unsafe {
+            // tail: currently the last node.
+            while let Some(tail) = self.tail {
+
+                // box the value. making it memory safe.
+                let boxed = Box::from_raw(tail);
+
+                boxed.prev.map( |node| {
+                    (*node).next = None;
+                });
+                self.tail = boxed.prev;
+            }
+            self.head = None;
+        }
     }
     pub fn set_drift(&mut self, drift: f32) {
         self.drift = drift;

@@ -5,8 +5,8 @@ use crate::base::*;
 
 #[derive(Debug)]
 pub struct RandomWalk1D {
-    pub head: Option<*mut Node>,
-    pub tail: Option<*mut Node>,
+    head: Option<*mut Node>,
+    tail: Option<*mut Node>,
 
     len: usize,
 
@@ -61,13 +61,11 @@ impl Process for RandomWalk1D {
 
         result
     }
-    #[inline]
     fn generate(&mut self) {
         while self.distance > 0.0 {
             self.generate_single();
         }
     }
-    #[inline]
     // generate single value
     fn generate_single(&mut self) {
         let mut point: Point = Point {x: 0.0, y: 0.0 };

@@ -13,7 +13,20 @@ path = "src/lib.rs"
 name = "process_bin"
 path = "src/main.rs"
 
+[[bench]]
+name = "bench_generate"
+path = "benches/benchmark.rs"
+harness = false
+
+[dev-dependencies]
+criterion = "0.3"
+
 [dependencies]
 num-integer = "0.1"
 num-traits = "0.2"
 rand = "0.8"
+futures = "0.3"
+tokio = {version = "0.2", features = ["full"] }
+
+log = "0.4"
+simplelog = "0.7"

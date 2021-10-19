@@ -1,5 +1,5 @@
 // basic traits and types implemented by the structs.
-use std::marker::PhantomData;
+use std::{marker::PhantomData, mem::size_of};
 
 
 pub trait Process {
@@ -22,7 +22,7 @@ pub struct Point {
     pub y: f32,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct Node
 {
     pub current: Point,
@@ -42,18 +42,23 @@ impl Node {
 
 // struct created by calling iter() method on the model struct.
 // -> move to base.rs as a base for all model types.
-pub struct ProcessIter<Node> {
-    head: Option<*mut Node>,
-    tail: Option<*mut Node>,
-    // marker to prevent compiler form complaining about lifetime specifier 'a
-    marker: PhantomData<*mut Node>
+pub struct ProcessIterMut {
+    pub head: Option<*mut Node>,
+    pub tail: Option<*mut Node>,
+    pub len: usize,
+}
+
+pub trait ProcessIntoIterator {
+    type Item;
+    type ProcessIntoIter;
+
+    fn into_iter(&mut self) -> Self::ProcessIntoIter; 
 }
 
 // iterator one-ended
-impl Iterator for ProcessIter<Node> {
-    type Item = Point;
+impl<'a> Iterator for ProcessIterMut {
+    type Item = *mut Node;
 
-    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         match self.head {
             None => {
@@ -61,10 +66,10 @@ impl Iterator for ProcessIter<Node> {
             },
             Some(head) => {
                 unsafe {
-                    let node = &*head;
-                    self.head = node.next;
+
+                    self.head = (*head).next;
                     // return copy of current element, not next element.
-                    Some(node.current)
+                    Some(head)
                 }
             }
         }
