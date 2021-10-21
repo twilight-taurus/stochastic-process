@@ -108,7 +108,7 @@ impl Process for Bernoulli {
             } else {
                 // lower 50% : stay
                 point.y = self.initial.y;
-            }      
+            }
         }
 
         let boxed = Box::new( Node::new(point) );
