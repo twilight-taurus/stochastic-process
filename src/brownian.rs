@@ -1,12 +1,4 @@
-use futures::future;
-use futures::sink::Send;
-//use num_integer::Roots;
 use rand::Rng;
-use num_traits::{PrimInt, Float, NumOps, FromPrimitive, ToPrimitive, NumAssign};
-use num_traits::cast::NumCast;
-
-use tokio::{task, time, join}; // 1.3.0
-use tokio::stream::{Stream, StreamExt};
 
 use crate::base::*;
 
@@ -15,8 +7,6 @@ pub struct GeometricBrownianMotion
 {
     head: Option<*mut Node>,
     tail: Option<*mut Node>,
-
-    calculated_values: std::vec::Vec<Point>,
 
     len: usize,
 
@@ -37,45 +27,22 @@ impl ProcessIntoIterator for GeometricBrownianMotion {
 
     fn into_iter(&mut self) -> Self::ProcessIntoIter {
         ProcessIterMut {
-            head: self.head.clone(), //
-            tail: self.tail.clone(),
+            head: self.head,
+            tail: self.tail,
             len: (self.distance / self.step) as usize,
         }
     }
 }
 
-
-
-impl GeometricBrownianMotion {
-    pub fn new(initial: Point, drift: f32, volatility: f32, step: f32, loops: u32) -> Self {
-        Self {
-            head: None,
-            tail: None,
-
-            calculated_values: std::vec::Vec::<Point>::new(),
-            len: 0,
-
-            // model parameters
-            initial: initial,
-            drift: drift,
-            volatility: volatility,
-            step: step,
-            distance: loops as f32 * step,
-        }
-    }
-
-    fn retrieve(&mut self) {
-
-    }
-
+impl Process for GeometricBrownianMotion {
     #[inline]
-    fn push_back(&mut self, mut boxed: Box<Node>) {
-    
+    fn push_back(&mut self, mut boxed: Box<Node>) -> usize {
+
         boxed.next = None;
         boxed.prev = self.tail; // assign current tail node of container to prev pointer of new node. 
                                 // -> (the container's last element)
         unsafe {
-            let node = Box::leak(boxed);
+            let node: *mut Node = Box::leak(boxed);
 
             match self.tail {
                 // no elements in container. create head node.
@@ -88,6 +55,7 @@ impl GeometricBrownianMotion {
             self.tail = Some(node);
         }
         self.len += 1;
+        self.len
     }
     #[inline]
     fn pop_back(&mut self) -> Option<Box<Node>> {
@@ -114,13 +82,13 @@ impl GeometricBrownianMotion {
     }
 
     // generate motion from given attributes
-    pub fn generate(&mut self) {
+    fn generate(&mut self) {  
         while self.distance > 0.0 {
             self.generate_single();
         }
     }
     // generate single value
-    pub fn generate_single(&mut self) {
+    fn generate_single(&mut self) {
         if let Some(tail) = self.tail {
             unsafe {
                 let cur = &(*tail).current;
@@ -150,20 +118,7 @@ impl GeometricBrownianMotion {
 
         self.distance -= self.step;
     }
-    // generate with different params
-    pub fn generate_more(&mut self, n: u32, initial: u32, drift: u32, volatility: u32, delta: f32, total_time: f32) {
-
-    }
-    // single element moved from linked list to vec.
-    async fn reorganize_single(&mut self) /*-> Option<*mut Node> */{
-        
-    }
-    // reorganize the linked-list into a Rust Vec type. (blocks r/w access to the linked-list.)
-    // it is done after generate() has completed.
-
-    // with a linked list initialization is slightly faster, with the added benefit of fast
-    // deallocation of a Vec type.
-    pub fn reset(&mut self) {
+    fn reset(&mut self) {
         // if stopped, either end reached (reset complete), or linked list is broken.
         unsafe {
             // tail: currently the last node.
@@ -178,6 +133,24 @@ impl GeometricBrownianMotion {
                 self.tail = boxed.prev;
             }
             self.head = None;
+        }
+    }
+}
+
+impl GeometricBrownianMotion {
+    pub fn new(initial: Point, drift: f32, volatility: f32, step: f32, loops: u32) -> Self {
+        Self {
+            head: None,
+            tail: None,
+    
+            len: 0,
+    
+            // model parameters
+            initial: initial,
+            drift: drift,
+            volatility: volatility,
+            step: step,
+            distance: loops as f32 * step,
         }
     }
     pub fn set_drift(&mut self, drift: f32) {

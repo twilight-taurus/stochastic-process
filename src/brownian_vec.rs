@@ -1,7 +1,4 @@
-use std::thread::current;
-
 use rand::Rng;
-use num_traits::{PrimInt, Float, NumOps, FromPrimitive, ToPrimitive, NumAssign};
 
 //use crate::base::*;
 
@@ -45,13 +42,9 @@ pub struct GeometricBrownianMotion
 impl GeometricBrownianMotion {
     pub fn new(initial: Point, drift: f32, volatility: f32, step: f32, loops: u32) -> Self {
 
-        let mut vector = std::vec::Vec::<Point>::new();
-//        vector.reserve( loops as usize);
-
         Self {
-            calculated_values: vector,
-
-            // model parameters
+            calculated_values: std::vec::Vec::with_capacity(loops as usize),
+            // model parameters 
             initial: initial,
 
             drift: drift,
@@ -77,19 +70,26 @@ impl GeometricBrownianMotion {
     }
     // generate single value
     pub fn generate_single(&mut self) {
-        if self.calculated_values.is_empty() {
-            let y_value = self.initial.y * self.step * (self.drift as f32) +
+        let mut point = Point { x: 0.0, y: 0.0};
+
+        point.y = self.initial.y * self.step * (self.drift as f32) +
                     self.volatility * ( rand::thread_rng().gen_range(0..(self.step.sqrt() as u32)) as f32 );
+        point.x = self.step;
+        self.calculated_values.push( point );
 
-            self.calculated_values.push( Point {x: self.step, y: y_value} );
-        } else {
-            let current_point = self.calculated_values.last().unwrap();
-            let y_value= current_point.y * self.step * (self.drift as f32) +
+        loop {
+            point.y = point.y * self.step * (self.drift as f32) +
             self.volatility * ( rand::thread_rng().gen_range(0..(self.step.sqrt() as u32)) as f32 );
+            point.x += point.x;
 
-            self.calculated_values.push( Point {x: current_point.x + self.step, y: y_value} );
+            self.calculated_values.push( point );
+
+            self.distance -= self.step;
+
+            if self.distance <= 0.0 {
+                break;
+            }
         }
-        self.distance -= self.step;
     }
     // generate with different params
     pub fn generate_more(&mut self, n: u32, initial: u32, drift: u32, volatility: u32, delta: f32, total_time: f32) {
