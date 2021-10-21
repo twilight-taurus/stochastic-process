@@ -15,6 +15,19 @@ pub struct RandomWalk1D {
     distance: f32, // total distance: multiple of step.x
 }
 
+impl IntoIterator for RandomWalk1D {
+    type Item = Point;
+    type IntoIter = ProcessIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        ProcessIter {
+            head: self.head,
+            tail: self.tail,
+            len: (self.distance / self.step.x) as usize,
+        }
+    }
+}
+
 impl Process for RandomWalk1D {
     #[inline]
     fn push_back(&mut self, mut boxed: Box<Node>) -> usize {

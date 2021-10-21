@@ -21,12 +21,12 @@ pub struct GeometricBrownianMotion
     distance: f32, // total distance: multiple of step
 }
 
-impl ProcessIntoIterator for GeometricBrownianMotion {
-    type Item = *mut Node;
-    type ProcessIntoIter = ProcessIterMut;
+impl IntoIterator for GeometricBrownianMotion {
+    type Item = Point;
+    type IntoIter = ProcessIter;
 
-    fn into_iter(&mut self) -> Self::ProcessIntoIter {
-        ProcessIterMut {
+    fn into_iter(self) -> Self::IntoIter {
+        ProcessIter {
             head: self.head,
             tail: self.tail,
             len: (self.distance / self.step) as usize,

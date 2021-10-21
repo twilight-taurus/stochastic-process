@@ -38,7 +38,7 @@ impl Node {
 
 // struct created by calling iter() method on the model struct.
 // -> move to base.rs as a base for all model types.
-pub struct ProcessIterMut {
+pub struct ProcessIter {
     pub head: Option<*mut Node>,
     pub tail: Option<*mut Node>,
     pub len: usize,
@@ -52,8 +52,8 @@ pub trait ProcessIntoIterator {
 }
 
 // iterator one-ended
-impl<'a> Iterator for ProcessIterMut {
-    type Item = *mut Node;
+impl<'a> Iterator for ProcessIter {
+    type Item = Point;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.head {
@@ -62,10 +62,9 @@ impl<'a> Iterator for ProcessIterMut {
             },
             Some(head) => {
                 unsafe {
-
                     self.head = (*head).next;
                     // return copy of current element, not next element.
-                    Some(head)
+                    Some((*head).current)
                 }
             }
         }

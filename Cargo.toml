@@ -1,5 +1,5 @@
 [package]
-name = "stoch-process-rs"
+name = "stochastic-process"
 version = "0.1.0"
 edition = "2018"
 
@@ -20,13 +20,10 @@ harness = false
 
 [dev-dependencies]
 criterion = "0.3"
+log = "0.4"
+simplelog = "0.7"
 
 [dependencies]
 num-integer = "0.1"
 num-traits = "0.2"
 rand = "0.8"
-futures = "0.3"
-tokio = {version = "0.2", features = ["full"] }
-
-log = "0.4"
-simplelog = "0.7"

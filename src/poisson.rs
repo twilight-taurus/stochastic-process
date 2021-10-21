@@ -34,3 +34,16 @@ pub struct Poisson
     average_dist: f32, // average time it takes for event to occur. ( -> as average distance )
     total_dist: f32, // total time used for generation. ( -> as total distance.)
 }
+
+impl IntoIterator for Poisson {
+    type Item = Point;
+    type IntoIter = ProcessIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        ProcessIter {
+            head: self.head,
+            tail: self.tail,
+            len: (self.total_dist / self.average_dist) as usize,
+        }
+    }
+}

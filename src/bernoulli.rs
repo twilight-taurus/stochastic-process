@@ -16,6 +16,19 @@ pub struct Bernoulli {
     distance: f32, // total distance: multiple of step.x
 }
 
+impl IntoIterator for Bernoulli {
+    type Item = Point;
+    type IntoIter = ProcessIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        ProcessIter {
+            head: self.head,
+            tail: self.tail,
+            len: (self.distance / self.step.x) as usize,
+        }
+    }
+}
+
 impl Process for Bernoulli {
     #[inline]
     fn push_back(&mut self, mut boxed: Box<Node>) -> usize {
