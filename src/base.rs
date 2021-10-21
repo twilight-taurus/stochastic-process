@@ -1,17 +1,13 @@
 // basic traits and types implemented by the structs.
-use std::{marker::PhantomData, mem::size_of};
-
 
 pub trait Process {
     fn generate(&mut self); // calculate multiple steps
 
     fn generate_single(&mut self); // calculate a single step.
 
-//    fn generate_more(self);
+    fn reset(&mut self); // remove all elements
 
-//    fn reset(self); // remove all elements
-
-    fn push_back(&mut self, boxed: Box<Node>); // add an element to back
+    fn push_back(&mut self, boxed: Box<Node>) -> usize; // add an element to back
 
     fn pop_back(&mut self) -> Option<Box<Node>>; // remove an element from back
 }
@@ -27,7 +23,7 @@ pub struct Node
 {
     pub current: Point,
     pub next: Option<*mut Node>,
-    pub prev: Option<*mut Node>
+    pub prev: Option<*mut Node>,
 }
 
 impl Node {
